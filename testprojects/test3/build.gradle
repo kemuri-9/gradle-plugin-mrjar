@@ -1,0 +1,159 @@
+/**
+ * Copyright 2021 Steven Walters
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Test the following behaviors:
+ * * main java 8 code
+ * * with java 9 specific code
+ * * with java 10 specific code
+ * * with java tests for each
+ * * with modularity
+ * * using compatibility mode where applicable
+ */
+
+plugins {
+    id 'java-library'
+    id 'net.kemuri9.gradle.mrjar'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    sourceCompatibility = JavaVersion.toVersion(8)
+    targetCompatibility = JavaVersion.toVersion(8)
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir '../../src/test/resources/code/src/main/java'
+        }
+    }
+    test {
+        java {
+            srcDir '../../src/test/resources/code/src/test/java'
+        }
+    }
+}
+
+mrjar {
+    multireleaseSourceJar = true
+    baseVersion {
+        main {
+            patchesModule = 'test'
+        }
+        test {
+            patchesModule = 'test.test'
+        }
+    }
+    addVersion(9) {
+        main {
+            java {
+                src {
+                    srcDir('../../src/test/resources/code/src/java9/java')
+                }
+                documentation {
+                    options.showFromProtected().addBooleanOption('html5', true)
+                }
+            }
+            dependsOn(8) {
+                extendConfigurations = true
+            }
+        }
+        test {
+            java {
+                src {
+                    srcDir('../../src/test/resources/code/src/java9Test/java')
+                }
+            }
+            dependsOn(8) {
+                extendConfigurations = true
+            }
+        }
+        primaryModuleDefinition = true
+    }
+    addVersion(10) {
+        main {
+            patchesModule = 'test'
+            java {
+                src {
+                    srcDir('../../src/test/resources/code/src/java10/java')
+                }
+                documentation {
+                    options.showFromProtected().addBooleanOption('html5', true)
+                }
+            }
+            dependsOn(8) {
+                extendConfigurations = true
+            }
+            dependsOn 9
+        }
+        test {
+            patchesModule = 'test.test'
+            dependsOn(8) {
+                extendConfigurations = true
+            }
+            java {
+                src {
+                    srcDir('../../src/test/resources/code/src/java10Test/java')
+                }
+            }
+        }
+    }
+}
+
+task java9Test2(type: Test) {
+    dependsOn jar
+    description = 'Runs the unit tests for java 9. as a Jar'
+    group = JavaBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = project.tasks.java9Test.testClassesDirs
+    classpath = project.sourceSets.java9Test.runtimeClasspath
+    classpath += project.files(jar.archiveFile.get().asFile.absoluteFile)
+    javaLauncher = javaToolchains.launcherFor{ l -> l.languageVersion = JavaLanguageVersion.of(9) }
+}
+check.dependsOn java9Test2
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+    defaultCharacterEncoding = 'UTF-8'
+
+    testLogging {
+        afterSuite { desc, result ->
+            if (!desc.parent) {
+                System.out.print "${getPath()} results: ${result.resultType} (${result.testCount} tests, "
+                System.out.print "${result.successfulTestCount} passed, ${result.failedTestCount} failed, "
+                System.out.println "${result.skippedTestCount} skipped)"
+            }
+        }
+    }
+}
+
+task listArtifacts {
+    doLast {
+        println configurations.collect{ conf -> conf.artifacts.collect{ it.file.name } }.flatten().unique()
+    }
+}
+
+dependencies {
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.2'
+}

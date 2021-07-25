@@ -1,0 +1,3 @@
+*.bat text eolf=crlf
+gradlew text eol=lf
+gradle-wrapper.properties text eol=lf

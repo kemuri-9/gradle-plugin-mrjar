@@ -1,0 +1,114 @@
+/**
+ * Copyright 2021 Steven Walters
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+    id 'com.github.hierynomus.license' version '0.16.1'
+    id 'groovy' // tests only
+    id 'com.gradle.plugin-publish' version '0.18.0'
+}
+
+group = 'net.kemuri9.gradle'
+version = '1.0.0'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    toolchain.languageVersion = JavaLanguageVersion.of(8)
+}
+
+license {
+    strictCheck true
+    header project.file('LICENSEHEADER')
+    mapping('LanguageSupport', 'SCRIPT_STYLE')
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.deprecation = true
+    options.compilerArgs.add('-Xlint:all')
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+    defaultCharacterEncoding = 'UTF-8'
+}
+
+gradlePlugin {
+    plugins {
+        mrjar {
+            id = 'net.kemuri9.gradle.mrjar'
+            implementationClass = 'net.kemuri9.gradle.mrjar.MRJarPlugin'
+        }
+    }
+}
+
+pluginBundle {
+    website = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
+    vcsUrl = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
+
+    plugins {
+        mrjar {
+            displayName = 'Multi Release Jar plugin'
+            description = 'Plugin to aid in the creation of JPMS multi-release JARs.'
+            tags = ['java', 'multi-release', 'mrjar']
+        }
+    }
+}
+
+dependencies {
+    testImplementation localGroovy()
+    testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+}
+
+// include links to oracle and gradle javadocs in generated javadoc
+javadoc {
+    options {
+        links 'https://docs.gradle.org/7.0.2/javadoc/', 'https://docs.oracle.com/javase/8/docs/api/'
+    }
+}
+
+publishing {
+    repositories {
+        mavenLocal()
+    }
+   
+    publications {
+        pluginMaven(MavenPublication) {
+            
+            artifactId = 'mrjar'
+            
+            pom {
+                name = 'MR Jar'
+                description = 'Gradle Plugin for creating Multirelease Java JARs'
+                url = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
+                
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
