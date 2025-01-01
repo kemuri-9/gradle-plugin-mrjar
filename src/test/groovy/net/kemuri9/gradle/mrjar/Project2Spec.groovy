@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,19 +30,20 @@ class Project2Spec extends GradleRunnerSpecification {
 
     void 'tasks'() {
         expect:
-        BuildResult result = GradleRunner.create().withPluginClasspath().withProjectDir(projectDir)
-            .withArguments('tasks').build()
+        BuildResult result = newGradleRunner('tasks').withProjectDir(projectDir).withGradleVersion(gradleVersion).build()
         String output = result.output
         checkTaskListContainsVersion(output, 9, true)
         checkTaskListContainsGroovydoc(output, 9)
         checkTaskListContainsVersion(output, 10, true)
         checkTaskListContainsGroovydoc(output, 10)
+
+        where:
+        gradleVersion << GRADLE_VERSIONS
     }
 
     void 'list artifacts'() {
         expect:
-        BuildResult result = GradleRunner.create().withPluginClasspath().withProjectDir(projectDir)
-            .withArguments('listArtifacts').build()
+        BuildResult result = newGradleRunner('listArtifacts').withProjectDir(projectDir).withGradleVersion(gradleVersion).build()
         String output = result.output
         // base
         output.contains('test2.jar')
@@ -54,6 +55,9 @@ class Project2Spec extends GradleRunnerSpecification {
         // java 10
         output.contains('test2-java10-sources.jar')
         output.contains('test2-java10-groovydoc.jar')
+
+        where:
+        gradleVersion << GRADLE_VERSIONS
     }
 
     void 'build'() {
@@ -68,8 +72,8 @@ class Project2Spec extends GradleRunnerSpecification {
         Path groovydoc10JarPath = outputDir.resolve('test2-java10-groovydoc.jar')
 
         expect:
-        BuildResult result = GradleRunner.create().withPluginClasspath().withProjectDir(projectDir)
-            .withArguments('clean', 'build', 'check').build()
+        BuildResult result = newGradleRunner('clean', 'build', 'check')
+                .withProjectDir(projectDir).withGradleVersion(gradleVersion).build()
         result.tasks(TaskOutcome.FAILED).empty
 
         result.output.contains(':test results: SUCCESS (1 tests, 1 passed, 0 failed, 0 skipped)')
@@ -103,5 +107,8 @@ class Project2Spec extends GradleRunnerSpecification {
 
         List<String> groovydoc10Jar = jarPaths(groovydoc10JarPath)
         groovydoc10Jar.contains('index.html')
+
+        where:
+        gradleVersion << GRADLE_VERSIONS
     }
 }

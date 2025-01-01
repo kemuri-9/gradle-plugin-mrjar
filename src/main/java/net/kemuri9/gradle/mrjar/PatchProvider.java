@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.internal.provider.Providers;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.external.javadoc.internal.JavadocOptionFileOptionInternal;
@@ -45,17 +48,19 @@ public class PatchProvider implements CommandLineArgumentProvider,
      * @return {@link PatchProvider} for the specified {@code providers}
      */
     public static PatchProvider getProvider(List<CommandLineArgumentProvider> providers) {
-        PatchProvider provider = providers.stream().filter(PatchProvider.class::isInstance)
-                .findFirst().map(PatchProvider.class::cast).orElse(null);
-        if (provider == null) {
-            provider = new PatchProvider();
-            providers.add(provider);
+        for (CommandLineArgumentProvider provider : providers) {
+            if (provider instanceof PatchProvider) {
+                return (PatchProvider) provider;
+            }
         }
+        // no hit, create and add
+        PatchProvider provider = new PatchProvider();
+        providers.add(provider);
         return provider;
     }
 
     /** patches to add */
-    protected final Map<String, List<File>> patches;
+    protected final Map<String, List<Provider<File>>> patches;
 
     /**
      * Create a new {@link PatchProvider}
@@ -67,10 +72,28 @@ public class PatchProvider implements CommandLineArgumentProvider,
     /**
      * Add a directory to the list of patches for the module
      * @param moduleName name of the module to add to its patch list
+     * @param directory {@link DirectoryProperty} representing the directory to patch the module with
+     */
+    public void add(String moduleName, DirectoryProperty directory) {
+        add(moduleName, directory.getAsFile());
+    }
+
+    /**
+     * Add a directory to the list of patches for the module
+     * @param moduleName name of the module to add to its patch list
      * @param directory {@link File} representing the directory to patch the module with
      */
     public void add(String moduleName, File directory) {
-        List<File> modulePatches = patches.computeIfAbsent(moduleName, (s)-> new ArrayList<>());
+        add(moduleName, Providers.of(directory));
+    }
+
+    /**
+     * Add a directory to the list of patches for the module
+     * @param moduleName name of the module to add to its patch list
+     * @param directory {@link DirectoryProperty} representing the directory to patch the module with
+     */
+    public void add(String moduleName, Provider<File> directory) {
+        List<Provider<File>> modulePatches = patches.computeIfAbsent(moduleName, (String ignored)-> new ArrayList<>());
         if (!modulePatches.contains(directory)) {
             modulePatches.add(directory);
         }
@@ -97,8 +120,8 @@ public class PatchProvider implements CommandLineArgumentProvider,
      * @return value of the {@code --patch-module} argument
      */
     protected String calcPatchArgument(String moduleName) {
-        List<File> modulePatches = patches.get(moduleName);
-        String paths = modulePatches.stream().map(File::getAbsolutePath)
+        List<Provider<File>> modulePatches = patches.get(moduleName);
+        String paths = modulePatches.stream().map(Provider::get).map(File::getAbsolutePath)
                 .collect(Collectors.joining(File.pathSeparator));
         return moduleName + "=" + paths;
     }
@@ -120,15 +143,23 @@ public class PatchProvider implements CommandLineArgumentProvider,
     @Input
     @Override
     public Map<String, List<File>> getValue() {
-        return patches;
+        Map<String, List<File>> values = new HashMap<>(patches.size());
+        for (Map.Entry<String, List<Provider<File>>> entry : patches.entrySet()) {
+            List<File> files = new ArrayList<>(entry.getValue().size());
+            for (Provider<File> provider : entry.getValue()) {
+                files.add(provider.get());
+            }
+            values.put(entry.getKey(), files);
+        }
+        return values;
     }
 
     /**
      * Prune {@code null} and empty patch lists from the map
      */
     protected void prune() {
-        for (Iterator<Map.Entry<String, List<File>>> entryIter = patches.entrySet().iterator(); entryIter.hasNext();) {
-            Map.Entry<String, List<File>> entry = entryIter.next();
+        for (Iterator<Map.Entry<String, List<Provider<File>>>> entryIter = patches.entrySet().iterator(); entryIter.hasNext();) {
+            Map.Entry<String, List<Provider<File>>> entry = entryIter.next();
             while (entry.getValue().contains(null)) {
                 entry.getValue().remove(null);
             }
@@ -143,7 +174,11 @@ public class PatchProvider implements CommandLineArgumentProvider,
     public void setValue(Map<String, List<File>> value) {
         value = (value == null) ? Collections.emptyMap() : value;
         patches.clear();
-        patches.putAll(value);
+        for (Map.Entry<String, List<File>> entry : value.entrySet()) {
+            for (File file : entry.getValue()) {
+                add(entry.getKey(), file);
+            }
+        }
     }
 
     @Override

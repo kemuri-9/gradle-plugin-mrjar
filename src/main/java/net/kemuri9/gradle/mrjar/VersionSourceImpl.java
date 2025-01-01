@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 package net.kemuri9.gradle.mrjar;
-
-import static org.gradle.api.attributes.DocsType.SOURCES;
-import static org.gradle.api.plugins.internal.JvmPluginsHelper.configureDocumentationVariantWithArtifact;
-import static org.gradle.api.plugins.internal.JvmPluginsHelper.findJavaComponent;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,8 +37,10 @@ import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.internal.AbstractValidatingNamedDomainObjectContainer;
 import org.gradle.api.internal.CollectionCallbackActionDecorator;
 import org.gradle.api.internal.plugins.DslObject;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -53,6 +51,7 @@ import org.gradle.api.tasks.testing.Test;
 import org.gradle.jvm.toolchain.JavaToolchainService;
 
 import net.kemuri9.gradle.mrjar.languages.LanguageSupport;
+import org.jetbrains.annotations.NotNull;
 
 class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<VersionSourceLanguage> implements VersionSource {
 
@@ -116,8 +115,9 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
         } else {
             // added version
             sourceSet = sourceSets.create("java" + version.getVersion().getMajorVersion() + name);
-            // add to the java plugin convention source sets as this is used by some of the other plugins
-            project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().add(sourceSet);
+            // add to the java plugin source sets as this is used by some of the other plugins
+            JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
+            java.getSourceSets().add(sourceSet);
         }
 
         this.dependsOn = new EnumMap<>(JavaVersion.class);
@@ -173,10 +173,10 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
                             && dependsMod.state == Modularity.State.MODULE_PATCH) {
                         // add patch for the output directory of the dependent
                         PatchProvider provider = PatchProvider.getProvider(test.getJvmArgumentProviders());
-                        provider.add(dependsMod.moduleName, dependCompile.getDestinationDir());
+                        provider.add(dependsMod.moduleName, dependCompile.getDestinationDirectory());
                     } else {
                         // otherwise, can just add to the classpath
-                        test.setClasspath(test.getClasspath().plus(project.files(dependCompile.getDestinationDir())));
+                        test.setClasspath(test.getClasspath().plus(project.files(dependCompile.getDestinationDirectory())));
                     }
                 }
 
@@ -215,7 +215,7 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
     }
 
     @Override
-    protected VersionSourceLanguageImpl doCreate(String name) {
+    protected @NotNull VersionSourceLanguageImpl doCreate(@NotNull String name) {
         MRJarExtensionImpl mrjar = Utils.getExtension(getProject());
         LanguageSupport support = mrjar.languages.get(name);
         if (support == null) {
@@ -248,7 +248,7 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
         // configure toolchains and modularity
         Modularity modularity = new DslObject(sourceSet).getExtensions().findByType(Modularity.class);
         // but update modularity for the source set if it's a module patch
-        if (modularity != null && patchesModule.getOrElse(null) != null) {
+        if (modularity != null && patchesModule.getOrNull() != null) {
             modularity.moduleName = patchesModule.get();
             modularity.state = Modularity.State.MODULE_PATCH;
         }
@@ -256,6 +256,7 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
 
         if (version instanceof VersionBase) {
             // no later code applies to base versions
+            return;
         }
 
         // configure any documentations in the version
@@ -327,13 +328,13 @@ class VersionSourceImpl extends AbstractValidatingNamedDomainObjectContainer<Ver
         // register the source jar
         hasSourceJar = true;
         Project project = getProject();
-        configureDocumentationVariantWithArtifact(sourceSet.getSourcesElementsConfigurationName(), sourceSet.getName(),
-                SOURCES, Collections.emptyList(), sourceSet.getSourcesJarTaskName(), sourceSet.getAllSource(),
-                findJavaComponent(project.getComponents()), project.getConfigurations(), project.getTasks(),
-                objFactory);
-        Configuration config = project.getConfigurations().getByName(sourceSet.getSourcesElementsConfigurationName());
+
+        Configuration config = JvmPluginsHelper.createDocumentationVariantWithArtifact(sourceSet.getSourcesElementsConfigurationName(),
+                sourceSet.getName(), org.gradle.api.attributes.DocsType.SOURCES, Collections.emptySet(),
+                sourceSet.getSourcesJarTaskName(), sourceSet.getAllSource(), (ProjectInternal) project);
         config.getAttributes().attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
                 Integer.parseInt(version.getVersion().getMajorVersion()));
+
         Jar sourceJar = (Jar) project.getTasks().getByName(sourceSet.getSourcesJarTaskName());
         /* and flag that duplicates should be excluded (ignored).
          * This will cause higher versions to be included and lower versions be excluded */

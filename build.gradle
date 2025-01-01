@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ plugins {
     id 'maven-publish'
     id 'com.github.hierynomus.license' version '0.16.1'
     id 'groovy' // tests only
-    id 'com.gradle.plugin-publish' version '0.18.0'
+    id 'com.gradle.plugin-publish' version '1.3.0'
 }
 
 group = 'net.kemuri9.gradle'
-version = '1.0.0'
+version = '1.1.0'
 
 repositories {
     mavenLocal()
@@ -51,25 +51,19 @@ tasks.withType(JavaCompile) {
 tasks.withType(Test) {
     useJUnitPlatform()
     defaultCharacterEncoding = 'UTF-8'
+    // pass gradle user home down to be able to read the gradle.properties
+    systemProperty('test.gradle.user.home', gradle.gradleUserHomeDir)
 }
 
 gradlePlugin {
+    website = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
+    vcsUrl = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
     plugins {
         mrjar {
             id = 'net.kemuri9.gradle.mrjar'
             implementationClass = 'net.kemuri9.gradle.mrjar.MRJarPlugin'
-        }
-    }
-}
-
-pluginBundle {
-    website = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
-    vcsUrl = 'https://github.com/kemuri-9/gradle-plugin-mrjar'
-
-    plugins {
-        mrjar {
             displayName = 'Multi Release Jar plugin'
-            description = 'Plugin to aid in the creation of JPMS multi-release JARs.'
+            description = 'Plugin to aid in the creation of multi-release JARs.'
             tags = ['java', 'multi-release', 'mrjar']
         }
     }
@@ -77,13 +71,14 @@ pluginBundle {
 
 dependencies {
     testImplementation localGroovy()
-    testImplementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+    testImplementation 'org.spockframework:spock-core:2.4-M4-groovy-3.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 // include links to oracle and gradle javadocs in generated javadoc
 javadoc {
     options {
-        links 'https://docs.gradle.org/7.0.2/javadoc/', 'https://docs.oracle.com/javase/8/docs/api/'
+        links 'https://docs.gradle.org/8.9/javadoc/', 'https://docs.oracle.com/javase/8/docs/api/'
     }
 }
 

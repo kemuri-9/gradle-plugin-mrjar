@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.internal.jvm.JavaModuleDetector;
 
 import net.kemuri9.gradle.mrjar.languages.LanguageSupport;
+import org.jetbrains.annotations.NotNull;
 
 class MRJarExtensionImpl implements MRJarExtension, Action<Project> {
 
@@ -114,7 +115,7 @@ class MRJarExtensionImpl implements MRJarExtension, Action<Project> {
     }
 
     @Override
-    public void execute(Project project) {
+    public void execute(@NotNull Project project) {
 
         // evaluate for validity
         List<JavaVersion> isPrimaryModuleDefinition = versions.values().stream()
@@ -196,7 +197,7 @@ class MRJarExtensionImpl implements MRJarExtension, Action<Project> {
                 String verNum = entry.getKey().getMajorVersion();
                 SourceSet verSource = sourceSets.findByName("java" + verNum);
                 if (verSource == null) {
-                    // may be test only source
+                    // a test only source
                     continue;
                 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ public interface MRJarExtension {
      * Add a new {@link LanguageSupport} to recognize other JVM-based languages
      * @param support {@link LanguageSupport} to recognize
      */
-    public void addLanguage(LanguageSupport support);
+    void addLanguage(LanguageSupport support);
 
     /**
      * Add a JVM version to the multi-release jar
@@ -42,47 +42,47 @@ public interface MRJarExtension {
      *  This can be any value that {@link JavaVersion#toVersion(Object)} supports
      * @param configure {@link Action} indicating the configuration of {@link Version}
      */
-    public void addVersion(Object version, Action<? super Version> configure);
+    void addVersion(Object version, Action<? super Version> configure);
 
     /**
      * Perform a configuration on all added configured {@link Version}s
      * @param configure {@link Action} indicating the configuration to apply on all current added {@link Version}s
      */
-    public void allAddedVersions(Action<? super Version> configure);
+    void allAddedVersions(Action<? super Version> configure);
 
     /**
      * Perform a configuration on all configured {@link Version}s.
      * This will not configure the "base" version if it has not already been configured at least once.
      * @param configure {@link Action} indicating the configuration to apply on all current {@link Version}s
      */
-    public void allVersions(Action<? super Version> configure);
+    void allVersions(Action<? super Version> configure);
 
     /**
      * Perform a configuration on the base or "main" version of code
      * @param configure {@link Action} indicating the configuration to apply on the main version
      */
-    public void baseVersion(Action<? super Version> configure);
+    void baseVersion(Action<? super Version> configure);
 
     /**
      * State of the tests for all added versions also including the "main" tests.
      * @return {@link Property} for the state of the version centric tests using the "main" tests.
      */
     @Input
-    public Property<Boolean> getIncludeBaseTests();
+    Property<Boolean> getIncludeBaseTests();
 
     /**
      * Retrieve the current registered languages
      * @return current registered languages
      */
     @Internal
-    public Map<String, LanguageSupport> getLanguages();
+    Map<String, LanguageSupport> getLanguages();
 
     /**
      * State of the source jar being multi-release, similar to the compiled code jar
      * @return {@link Property} for the state of the source jar being multi-release
      */
     @Input
-    public Property<Boolean> getMultireleaseSourceJar();
+    Property<Boolean> getMultireleaseSourceJar();
 
     /**
      * State of the tests utilizing the Jar instead of the class files directly.
@@ -92,12 +92,12 @@ public interface MRJarExtension {
      * @return {@link Property} for the state of the tests using the Jar in testing.
      */
     @Input
-    public Property<Boolean> getUseJarInTests();
+    Property<Boolean> getUseJarInTests();
 
     /**
      * State of all tasks using version specific Java toolchains to perform the tasks with
      * @return state of all tasks using version specific Java toolchains to perform the tasks with
      */
     @Input
-    public Property<Boolean> getUseToolchain();
+    Property<Boolean> getUseToolchain();
 }

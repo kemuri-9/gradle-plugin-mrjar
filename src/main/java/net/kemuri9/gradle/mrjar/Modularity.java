@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ package net.kemuri9.gradle.mrjar;
 public class Modularity {
 
     /** State of Modularity */
-    public static enum State {
+    public enum State {
 
         /** Is a declared module: includes the module-info.java */
         IS_MODULE,

@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ public interface LanguageSupport {
      * Base type for handling task extensions related to the language support
      * @param <T> Type of {@link DefaultTask}
      */
-    public interface TaskHandler<T extends DefaultTask> {
+    interface TaskHandler<T extends DefaultTask> {
         /**
          * Configure the task for the specified {@link SourceSet}.
          * The dependent plugin for the task may not yet be applied,
@@ -52,14 +52,14 @@ public interface LanguageSupport {
          * @param set {@link SourceSet} to configure the task for
          * @param configure {@link Action} indicating the configuration to perform on the task
          */
-        public void configure(Project project, SourceSet set, Action<? super T> configure);
+        void configure(Project project, SourceSet set, Action<? super T> configure);
 
         /**
          * Retrieve the task's {@link Modularity}
          * @param task {@link DefaultTask} task to retrieve its {@link Modularity}
          * @return {@link Modularity} for the {@link DefaultTask}
          */
-        public default Modularity getModularity(T task) {
+        default Modularity getModularity(T task) {
             return getTaskModularity(task);
         }
 
@@ -71,14 +71,14 @@ public interface LanguageSupport {
          * @throws UnknownTaskException When the expected task does not exist
          * @throws ClassCastException When the expected task is not of the expected type
          */
-        public T getTask(Project project, SourceSet set);
+        T getTask(Project project, SourceSet set);
 
         /**
          * Configure the task's modularity, when supported.
          * @param task {@link DefaultTask} task to configure
          * @param modularity {@link Modularity} details of the {@link DefaultTask}'s modularity
          */
-        public default void setModularity(T task, Modularity modularity) {
+        default void setModularity(T task, Modularity modularity) {
            setTaskModularity(task, modularity);
         }
 
@@ -88,14 +88,14 @@ public interface LanguageSupport {
          * @param javaToolchains {@link JavaToolchainService} that manages Java tool chains in Gradle
          * @param version version of Java to utilize in the task
          */
-        public default void setToolchain(T task, JavaToolchainService javaToolchains, JavaVersion version) {};
+        default void setToolchain(T task, JavaToolchainService javaToolchains, JavaVersion version) {};
 
         /**
          * Configure the task to target a specific version of Java
          * @param task {@link Task} task to configure
          * @param version version of Java to compile with
          */
-        public default void setVersionOptions(T task, JavaVersion version) {};
+        default void setVersionOptions(T task, JavaVersion version) {};
     }
 
     /**
@@ -103,14 +103,14 @@ public interface LanguageSupport {
      *
      * @param <T> Type of {@link AbstractCompile}
      */
-    public interface CompileHandler<T extends AbstractCompile> extends TaskHandler<T> {
+    interface CompileHandler<T extends AbstractCompile> extends TaskHandler<T> {
         /**
          * Flag that the specified task depends on the output of a compilation
          * @param project {@link Project} that is being built out
          * @param task {@link AbstractCompile} that depends on the output of another
          * @param dependedOn {@link AbstractCompile} that is depended on
          */
-        public void addDependency(Project project, T task, AbstractCompile dependedOn);
+        void addDependency(Project project, T task, AbstractCompile dependedOn);
     }
 
     /**
@@ -118,7 +118,7 @@ public interface LanguageSupport {
      *
      * @param <T> Type of {@link SourceTask}
      */
-    public interface DocumentationHandler<T extends SourceTask> extends TaskHandler<T> {
+    interface DocumentationHandler<T extends SourceTask> extends TaskHandler<T> {
 
         /**
          * Flag that the specified task includes the {@link SourceSet} for processing
@@ -126,7 +126,7 @@ public interface LanguageSupport {
          * @param task {@link SourceTask} that depends on the output of another
          * @param included {@link SourceSet} to include
          */
-        public void addSourceSet(Project project, T task, SourceSet included);
+        void addSourceSet(Project project, T task, SourceSet included);
 
         /**
          * Register the documentation task(s) for the specified {@link SourceSet}.
@@ -136,7 +136,7 @@ public interface LanguageSupport {
          * @param set {@link SourceSet} to register the documentation task for
          * @param version {@link JavaVersion} that the task is targeting
          */
-        public void register(Project project, SourceSet set, JavaVersion version);
+        void register(Project project, SourceSet set, JavaVersion version);
     }
 
     /**
@@ -167,33 +167,33 @@ public interface LanguageSupport {
      * This is called frequently, so it should be cached by the implementation.
      * @return {@link CompileHandler} for the language
      */
-    public CompileHandler<?> getCompilerHandler();
+    CompileHandler<?> getCompilerHandler();
 
     /**
      * Retrieve the handler for the documentation task for the language.
      * This is called frequently, so it should be cached by the implementation.
      * @return {@link DocumentationHandler} for the language
      */
-    public DocumentationHandler<?> getDocumentationHandler();
+    DocumentationHandler<?> getDocumentationHandler();
 
     /**
      * Retrieve the configuration name mapping for the source set added by the language.
      * @param set {@link SourceSet} to retrieve the configuration name mapping
      * @return {@link Map} of "standard" configuration names to the corresponding name for the source set
      */
-    public Map<String, String> getConfigurationNames(SourceSet set);
+    Map<String, String> getConfigurationNames(SourceSet set);
 
     /**
      * Retrieve the name of the JVM-based language
      * @return name of the JVM-based language
      */
-    public String getName();
+    String getName();
 
     /**
      * Perform any necessary initialization routines on the {@link Project}
      * @param project {@link Project} to perform initialization routines on
      */
-    public default void initialize(Project project) {};
+    default void initialize(Project project) {};
 
     /**
      * Check if this JVM-based language is utilized in the specified {@link SourceSet}
@@ -201,7 +201,7 @@ public interface LanguageSupport {
      * @param set {@link SourceSet} to configure
      * @return state of the JVM-based language being utilized in the {@link SourceSet}
      */
-    public boolean isIncluded(Project project, SourceSet set);
+    boolean isIncluded(Project project, SourceSet set);
 
     /**
      * Configure the {@link SourceDirectorySet} for the language
@@ -209,5 +209,5 @@ public interface LanguageSupport {
      * @param set {@link SourceSet} source set that contains the {@link SourceDirectorySet}
      * @param configure configuration {@link Action} on {@link SourceDirectorySet} to perform
      */
-    public void source(Project project, SourceSet set, Action<? super SourceDirectorySet> configure);
+    void source(Project project, SourceSet set, Action<? super SourceDirectorySet> configure);
 }

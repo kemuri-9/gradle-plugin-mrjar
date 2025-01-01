@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,13 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.attributes.java.TargetJvmVersion;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.internal.plugins.DslObject;
+import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.plugins.GroovyBasePlugin;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.GroovySourceSet;
+import org.gradle.api.tasks.GroovySourceDirectorySet;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.compile.AbstractCompile;
 import org.gradle.api.tasks.compile.GroovyCompile;
 import org.gradle.api.tasks.javadoc.Groovydoc;
@@ -56,7 +55,7 @@ public class LanguageSupportGroovy implements LanguageSupport {
 
             /* add to the classpath. Do NOT perform a contains check here as it causes the system
              * to resolve the entire compilation task graph! */
-            FileCollection classpath = compile.getClasspath().plus(project.files(dependsOn.getDestinationDir()));
+            FileCollection classpath = compile.getClasspath().plus(project.files(dependsOn.getDestinationDirectory()));
             compile.setClasspath(classpath);
         }
 
@@ -97,7 +96,7 @@ public class LanguageSupportGroovy implements LanguageSupport {
         @Override
         public void addSourceSet(Project project, Groovydoc task, SourceSet included) {
             DuplicateClassRemover dupRemover = new DuplicateClassRemover();
-            task.source(getGroovySource(included).getAllGroovy());
+            task.source(getGroovySource(included));
             task.getSource().visit(dupRemover);
             task.exclude(dupRemover);
         }
@@ -111,13 +110,12 @@ public class LanguageSupportGroovy implements LanguageSupport {
         }
 
         /**
-         * Retrieve the {@link GroovySourceSet} for a {@link SourceSet}
-         * @param set {@link SourceSet} to retrieve the associated {@link GroovySourceSet}
-         * @return {@link GroovySourceSet} for the {@link SourceSet}
+         * Retrieve the {@link GroovySourceDirectorySet} for a {@link GroovySourceDirectorySet}
+         * @param set {@link SourceSet} to retrieve the associated {@link GroovySourceDirectorySet}
+         * @return {@link GroovySourceDirectorySet} for the {@link SourceSet}
          */
-        public GroovySourceSet getGroovySource(SourceSet set) {
-            GroovySourceSet groovySourceSet = (new DslObject(set)).getConvention().getPlugin(GroovySourceSet.class);
-            return groovySourceSet;
+        public GroovySourceDirectorySet getGroovySource(SourceSet set) {
+            return set.getExtensions().getByType(GroovySourceDirectorySet.class);
         }
 
         /**
@@ -150,12 +148,13 @@ public class LanguageSupportGroovy implements LanguageSupport {
          */
         public void registerDocTask(Project project, SourceSet set, JavaVersion version) {
             project.getTasks().register(getTaskName(set), Groovydoc.class, groovyDoc -> {
+                JavaPluginExtension java = groovyDoc.getProject().getExtensions().getByType(JavaPluginExtension.class);
                 groovyDoc.setDescription("Generates Groovydoc API documentation for the " + set.getName() + " source code.");
                 groovyDoc.setGroup("documentation");
                 groovyDoc.setClasspath(set.getOutput().plus(set.getCompileClasspath()));
-                GroovySourceSet groovySourceSet = getGroovySource(set);
-                groovyDoc.source(groovySourceSet.getGroovy());
-                File docDir = project.getConvention().getPlugin(JavaPluginConvention.class).getDocsDir();
+                GroovySourceDirectorySet groovySourceSet = getGroovySource(set);
+                groovyDoc.source(groovySourceSet);
+                File docDir = java.getDocsDir().getAsFile().get();
                 groovyDoc.setDestinationDir(new File(docDir, getTaskName(set)));
             });
         }
@@ -170,13 +169,11 @@ public class LanguageSupportGroovy implements LanguageSupport {
             boolean isMain = set.getName().equals(SourceSet.MAIN_SOURCE_SET_NAME);
             String configName = isMain ? "groovydocElements" : set.getName() + "GroovydocElements";
             String taskName = getTaskName(set);
-            TaskContainer tasks = project.getTasks();
-            JvmPluginsHelper.configureDocumentationVariantWithArtifact(configName,
-                isMain ? null : set.getName(), "groovydoc", Collections.emptyList(), taskName + "Jar",
-                tasks.named(taskName), JvmPluginsHelper.findJavaComponent(project.getComponents()),
-                project.getConfigurations(), tasks, project.getObjects());
+
+            Configuration config = JvmPluginsHelper.createDocumentationVariantWithArtifact(configName,
+                    isMain ? null : set.getName(), "groovydoc", Collections.emptySet(),
+                    taskName + "Jar", getTask(project, set).getOutputs(), (ProjectInternal) project);
             // add the target version
-            Configuration config = project.getConfigurations().getByName(configName);
             config.getAttributes().attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
                     Integer.parseInt(version.getMajorVersion()));
         }
@@ -243,8 +240,8 @@ public class LanguageSupportGroovy implements LanguageSupport {
     @Override
     public void source(Project project, SourceSet set, Action<? super SourceDirectorySet> configure) {
         project.getPlugins().withType(GroovyBasePlugin.class, plugin -> {
-            GroovySourceSet groovySource = (GroovySourceSet) new DslObject(set).getConvention().getPlugins().get("groovy");
-            groovySource.groovy(configure);
+            GroovySourceDirectorySet groovySource = set.getExtensions().getByType(GroovySourceDirectorySet.class);
+            configure.execute(groovySource);
         });
     }
 }

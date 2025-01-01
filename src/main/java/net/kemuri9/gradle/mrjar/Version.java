@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public interface Version {
      * @return {@link Property} for the state of the version centric tests using the "main" tests.
      */
     @Input
-    public Property<Boolean> getIncludeBaseTests();
+    Property<Boolean> getIncludeBaseTests();
 
     /**
      * State of the version providing the primary Module definition that goes into the root of the JAR.
@@ -39,7 +39,7 @@ public interface Version {
      * @return {@link Property} for the state of the version providing the primary Module definition.
      */
     @Input
-    public Property<Boolean> getPrimaryModuleDefinition();
+    Property<Boolean> getPrimaryModuleDefinition();
 
     /**
      * State of the tests utilizing the Jar instead of the class files directly.
@@ -50,7 +50,7 @@ public interface Version {
      * @return {@link Property} for the state of the tests using the Jar in testing.
      */
     @Input
-    public Property<Boolean> getUseJarInTests();
+    Property<Boolean> getUseJarInTests();
 
     /**
      * State of the version using the associated version-specific Java toolchain to perform tasks with.
@@ -58,13 +58,13 @@ public interface Version {
      * @return {@link Property} for the state of the version using version-specific Java toolchain to perform tasks
      */
     @Input
-    public Property<Boolean> getUseToolchain();
+    Property<Boolean> getUseToolchain();
 
     /**
      * Version of Java that the configuration applies to
      * @return version of Java that the configuration applies to
      */
-    public JavaVersion getVersion();
+    JavaVersion getVersion();
 
     /**
      * Configure the main source code for the JVM-language version

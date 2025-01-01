@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package net.kemuri9.gradle.mrjar.languages;
 
-import static org.gradle.api.attributes.DocsType.JAVADOC;
-
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,11 +28,8 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.attributes.java.TargetJvmVersion;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.plugins.JavaBasePlugin;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.plugins.JavaPluginConvention;
-import org.gradle.api.plugins.PluginManager;
+import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.api.plugins.*;
 import org.gradle.api.plugins.internal.JvmPluginsHelper;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.reporting.ReportingExtension;
@@ -85,7 +80,7 @@ public class LanguageSupportJava implements LanguageSupport {
             /* add to the classpath (module path when it applies).
              * Do NOT perform a contains check here as it causes the system
              * to resolve the entire compilation task graph! */
-            FileCollection classpath = compile.getClasspath().plus(project.files(dependsOn.getDestinationDir()));
+            FileCollection classpath = compile.getClasspath().plus(project.files(dependsOn.getDestinationDirectory()));
             compile.setClasspath(classpath);
         }
 
@@ -99,7 +94,7 @@ public class LanguageSupportJava implements LanguageSupport {
             // add patch for the output directory of the dependent
             PatchProvider provider = PatchProvider.getProvider(compile.getOptions().getCompilerArgumentProviders());
             String moduleName = LanguageSupport.getTaskModularity(dependsOn).moduleName;
-            provider.add(moduleName, dependsOn.getDestinationDirectory().get().getAsFile());
+            provider.add(moduleName, dependsOn.getDestinationDirectory());
         }
 
         @Override
@@ -171,7 +166,7 @@ public class LanguageSupportJava implements LanguageSupport {
         }
 
         /**
-         * Add the {@link SourceSet} to the the module path of the {@link Javadoc} task
+         * Add the {@link SourceSet} to the module path of the {@link Javadoc} task
          * @param project {@link Project} that is being built out
          * @param task {@link Javadoc} task to add to its module path
          * @param include {@link SourceSet} to add to the source files to process
@@ -189,9 +184,9 @@ public class LanguageSupportJava implements LanguageSupport {
                 JavaCompile compile = (JavaCompile) project.getTasks().getByName(include.getCompileJavaTaskName());
                 Modularity compMod = LanguageSupport.getTaskModularity(compile);
                 if (compMod != null && compMod.state == Modularity.State.MODULE_PATCH) {
-                    provider.add(compMod.moduleName, compile.getDestinationDir());
+                    provider.add(compMod.moduleName, compile.getDestinationDirectory());
                 } else if (compMod != null && compMod.state == Modularity.State.IS_MODULE) {
-                   task.setClasspath(task.getClasspath().plus(project.files(compile.getDestinationDir())));
+                   task.setClasspath(task.getClasspath().plus(project.files(compile.getDestinationDirectory())));
                 }
                 task.dependsOn(compile);
             } catch (UnknownTaskException | ClassCastException ex) {
@@ -238,10 +233,10 @@ public class LanguageSupportJava implements LanguageSupport {
         public void registerDocTask(Project project, SourceSet set, JavaVersion version) {
             // register the javadoc task
             project.getTasks().register(getTaskName(set), Javadoc.class, javadoc -> {
-                JavaPluginConvention convention = project.getConvention().getPlugin(JavaPluginConvention.class);
+                JavaPluginExtension java = project.getExtensions().getByType(JavaPluginExtension.class);
                 javadoc.setDescription("Generates Javadoc API documentation for the " + set.getName() + " source code.");
                 javadoc.setGroup("documentation");
-                javadoc.getConventionMapping().map("destinationDir", ()-> new File(convention.getDocsDir(), getTaskName(set)));
+                javadoc.getConventionMapping().map("destinationDir", ()-> new File(java.getDocsDir().getAsFile().get(), getTaskName(set)));
                 javadoc.getConventionMapping().map("title", ()-> project.getExtensions().getByType(ReportingExtension.class).getApiDocTitle());
                 javadoc.setClasspath(set.getOutput().plus(set.getCompileClasspath()));
                 javadoc.source(set.getAllJava());
@@ -258,13 +253,10 @@ public class LanguageSupportJava implements LanguageSupport {
         public void registerDocJarTask(Project project, SourceSet set, JavaVersion version) {
             // register the javadoc jar task
             boolean isMain = set.getName().equals(SourceSet.MAIN_SOURCE_SET_NAME);
-            JvmPluginsHelper.configureDocumentationVariantWithArtifact(set.getJavadocElementsConfigurationName(),
-                isMain ? null : set.getName(), JAVADOC, Collections.emptyList(), set.getJavadocJarTaskName(),
-                project.getTasks().named(getTaskName(set)),
-                JvmPluginsHelper.findJavaComponent(project.getComponents()), project.getConfigurations(),
-                project.getTasks(), project.getObjects());
+            Configuration config = JvmPluginsHelper.createDocumentationVariantWithArtifact(set.getJavadocElementsConfigurationName(),
+                    isMain ? null : set.getName(), org.gradle.api.attributes.DocsType.JAVADOC, Collections.emptySet(),
+                    set.getJavadocJarTaskName(), getTask(project, set).getOutputs(), (ProjectInternal) project);
             // add the target version
-            Configuration config = project.getConfigurations().getByName(set.getJavadocElementsConfigurationName());
             config.getAttributes().attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE,
                     Integer.parseInt(version.getMajorVersion()));
         }

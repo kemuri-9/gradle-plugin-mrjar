@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,36 @@
  */
 package net.kemuri9.gradle.mrjar
 
+import org.gradle.testkit.runner.GradleRunner
+
+import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.stream.Stream
 
-import spock.lang.Specification
+abstract class GradleRunnerSpecification extends spock.lang.Specification {
 
-abstract class GradleRunnerSpecification extends Specification {
+    protected static List<String> GRADLE_VERSIONS = ['8.6', '8.9', '8.12']
+
+    /* gradle test kit does not read gradle home properties when launching,
+     * so it has to be manually read and passed along. this is required for some
+     * environments where the jdks are manually configured. */
+    @spock.lang.Shared
+    protected List<String> gradleHomeArgs
+
+    protected void setupSpec() {
+        Properties gradleHomeProps = new Properties()
+        try {
+            Path gradleHome = Paths.get(System.getProperty('test.gradle.user.home', ''))
+            gradleHomeProps.load(Files.newBufferedReader(gradleHome.resolve('gradle.properties'), StandardCharsets.UTF_8))
+        } catch (IOException ignored) {
+            System.err.println(ignored)
+        }
+        gradleHomeArgs = gradleHomeProps.collect{ k, v -> "-P${k}=${v}".toString() }
+    }
 
     protected void checkIsFile(Path path) {
         assert Files.exists(path)
@@ -87,5 +108,12 @@ abstract class GradleRunnerSpecification extends Specification {
             closeMe.each{ it.close() }
         }
         paths.sort(true)
+    }
+
+    protected GradleRunner newGradleRunner(String... args) {
+        List<String> argList = new ArrayList<>()
+        argList.addAll(gradleHomeArgs)
+        argList.addAll(args)
+        GradleRunner.create().withPluginClasspath().withArguments(argList)
     }
 }

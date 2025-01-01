@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,13 +43,14 @@ import org.gradle.internal.reflect.Instantiator;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.kemuri9.gradle.mrjar.languages.LanguageSupport;
 import net.kemuri9.gradle.mrjar.languages.LanguageSupport.TaskHandler;
 
-class Utils {
+final class Utils {
 
     private static final Logger log = LoggerFactory.getLogger(Utils.class);
 
@@ -108,10 +109,10 @@ class Utils {
                 langIter.remove();
                 continue;
             }
-            // task does not exist
             try {
                 lang.getCompilerHandler().getTask(project, set);
             } catch (ClassCastException | UnknownTaskException ex) {
+                // task does not exist
                 langIter.remove();
             }
         }
@@ -147,9 +148,9 @@ class Utils {
         return (JavaPluginExtension) project.getExtensions().getByName("java");
     }
 
-    static boolean getIsProperty(Property<Boolean> version, Property<Boolean> global, boolean defValue) {
-        if (version.isPresent()) {
-            return version.get();
+    static boolean getIsProperty(Property<Boolean> property, Property<Boolean> global, boolean defValue) {
+        if (property.isPresent()) {
+            return property.get();
         }
         // if extension global value is set, use it
         return global.getOrElse(defValue);
@@ -166,7 +167,7 @@ class Utils {
     static Instantiator instantiateFromFactory(ObjectFactory factory) {
         return new Instantiator() {
             @Override
-            public <T> T newInstance(Class<? extends T> type, Object... parameters)
+            public <T> @NotNull T newInstance(@NotNull Class<? extends T> type, Object @NotNull ... parameters)
                     throws ObjectInstantiationException {
                 return factory.newInstance(type, parameters);
             }
@@ -224,6 +225,4 @@ class Utils {
             handler.setModularity(task, modularity);
         }
     }
-
-    private Utils() {}
 }

@@ -6,23 +6,26 @@ With the use of a multi-release JAR, a "base" version is utilized and then versi
 
 ## Requirements
 
-### Minimum
-The minimum requirement for utilizing the plugin is the use of Gradle 7.0 or higher.
-Earlier versions are not tested or verified.
-Attempting to use the plugin with an earlier version will likely result in errors.
+### 1.1.0
+
+1.1.0 Supports Gradle versions [8.5, 9.0). That is any 8.5 and higher is supported until 9.0.
+
+### 1.0.0
+
+1.0.0 Supports Gradle versions [7.4, 8.0).
 
 ## Applying to a project
 
 Groovy
 
     plugins {
-      id 'net.kemuri9.gradle.mrjar' version '1.0.0'
+      id 'net.kemuri9.gradle.mrjar' version '1.1.0'
     }
 
 Kotlin
 
     plugins {
-      id("net.kemuri9.gradle.mrjar") version "1.0.0"
+      id("net.kemuri9.gradle.mrjar") version "1.1.0"
     }
 
 ## Use

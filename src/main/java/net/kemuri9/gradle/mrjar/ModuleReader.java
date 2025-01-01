@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Steven Walters
+ * Copyright 2021-2025 Steven Walters
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  * Utility for reading details out of the module-info.java
  * This is not actually necessary in practice, but it does help with debugging
  */
-class ModuleReader {
+final class ModuleReader {
 
     private static final class State {
         boolean inComment;
